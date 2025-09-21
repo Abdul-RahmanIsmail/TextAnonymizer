@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Text Anonymizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial;
+            background: #f0f4f8;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #333;
+        }
+
+        form {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #007bff, #00c6ff);
+            border: none;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 2px;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .tag {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 12px;
+            margin: 2px;
+            font-size: 14px;
+        }
+
+        .tag .remove {
+            margin-left: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        #result {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .input-style {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .input-style:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+            outline: none;
+        }
+
+        /* زر رفع الملفات مخصص */
+        .custom-file-upload {
+            border: 1px solid #007bff;
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            background: #f0f8ff;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .custom-file-upload:hover {
+            background: #e0f0ff;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Text Anonymizer</h1>
+
+    <form id="anonForm">
+        <label for="file"><i class="fa fa-file"></i> Choose file (.txt or .docx):</label>
+        <label class="custom-file-upload">
+            <input type="file" id="file" name="file" required>
+            Browse
+        </label>
+        <span id="file-name"></span>
+
+        <label for="labels"><i class="fa fa-tags"></i> Categories of entities:</label>
+        <input type="text" id="labels" name="labels" placeholder="PER,ORG,LOC" readonly>
+        <div id="tags-container"></div>
+
+        <div>
+            <button type="button" class="btn" data-label="PER">PER</button>
+            <button type="button" class="btn" data-label="ORG">ORG</button>
+            <button type="button" class="btn" data-label="LOC">LOC</button>
+            <button type="button" class="btn" data-label="EMAIL">EMAIL</button>
+            <button type="button" class="btn" data-label="PHONE">PHONE</button>
+        </div>
+
+        <div>
+            <label for="style"><i class="fa fa-pencil-alt"></i> Replacement style:</label>
+            <input list="style-options" id="style" name="style" placeholder="Choose or type..." class="input-style">
+            <datalist id="style-options">
+                <option value="[REDACTED]">
+                <option value="*****">
+                <option value="XXX">
+                <option value="###">
+                <option value="CONFIDENTIAL">
+            </datalist>
+        </div>
+
+
+        <label>
+            <input type="checkbox" id="use_faker" name="use_faker">
+            Use Faker to replace entities
+        </label>
+
+
+        <button type="button" class="btn" onclick="submitForm(event)">Execute</button>
+
+        <div id="progress-container"
+            style="width:100%; background:#e0e0e0; height:8px; border-radius:5px; overflow:hidden;">
+            <div id="progress-bar" style="width:0%; height:100%; background:#007bff; transition:width 0.3s;"></div>
+        </div>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        const labelsInput = document.getElementById("labels");
+        const tagsContainer = document.getElementById("tags-container");
+
+        function addLabel(label) {
+            const current = labelsInput.value.split(",").filter(l => l);
+            if (!current.includes(label)) {
+                current.push(label);
+                labelsInput.value = current.join(",");
+
+                // إنشاء تاج
+                const tag = document.createElement("span");
+                tag.className = "tag";
+                tag.textContent = label;
+
+                const removeBtn = document.createElement("span");
+                removeBtn.className = "remove";
+                removeBtn.textContent = "×";
+                removeBtn.onclick = () => {
+                    tag.remove();
+                    labelsInput.value = labelsInput.value.split(",").filter(l => l !== label).join(",");
+                };
+                tag.appendChild(removeBtn);
+                tagsContainer.appendChild(tag);
+            }
+        }
+
+        document.querySelectorAll("button.btn[data-label]").forEach(btn => {
+            btn.addEventListener("click", () => addLabel(btn.dataset.label));
+        });
+
+        async function submitForm(event) {
+            event.preventDefault();
+            const formData = new FormData();
+            formData.append("file", document.getElementById("file").files[0]);
+            formData.append("labels", labelsInput.value);
+            formData.append("style", document.getElementById("style").value);
+            formData.append("use_faker", document.getElementById("use_faker").checked);
+
+            const progressBar = document.getElementById("progress-bar");
+            progressBar.style.width = "0%";
+            document.getElementById("result").innerHTML = "";
+
+            try {
+                const response = await fetch("/api/anonymize", { method: "POST", body: formData });
+                if (!response.ok) {
+                    document.getElementById("result").innerHTML = `<p style="color:red;">Error: ${response.statusText}</p>`;
+                    return;
+                }
+                progressBar.style.width = "100%";
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                document.getElementById("result").innerHTML = `<a href="${url}" download="anonymized.docx" class="btn">Download File</a>`;
+            } catch (err) {
+                document.getElementById("result").innerHTML = `<p style="color:red;">Exception: ${err}</p>`;
+            }
+        }
+    </script>
+</body>
+
+</html>
