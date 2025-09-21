@@ -4,18 +4,17 @@ import uuid
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from io_utils import extract_txt, extract_docx, save_docx
+from io_utils import extract_txt, extract_docx, extract_pdf, save_docx
 from ner import get_entities
 from anonymizer import anonymize_text
 from fastapi.staticfiles import StaticFiles
-
 
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,10 +36,11 @@ app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 async def root():
     return FileResponse("static/index.html")
 
+
 @app.post("/api/anonymize")
 async def anonymize_file(
     file: UploadFile,
-    labels: str = Form(...),   # مثال: "PER,LOC"
+    labels: str = Form(...),
     style: str = Form("*****"),
     use_faker: bool = Form(False)
 ):
@@ -51,21 +51,24 @@ async def anonymize_file(
         shutil.copyfileobj(file.file, f)
 
     if file.filename.endswith(".txt"):
-        text = extract_txt(file_path)
-        paras = text.split("\n")
+        paras = extract_txt(file_path).split("\n")
+        text = "\n".join(paras)
     elif file.filename.endswith(".docx"):
         text, paras = extract_docx(file_path)
+    elif file.filename.endswith(".pdf"):
+        paras = extract_pdf(file_path)
+        text = "\n".join(paras)
     else:
-        return JSONResponse({"error": "Only .txt or .docx supported"}, status_code=400)
+        return JSONResponse({"error": "Only .txt, .docx, or .pdf supported"}, status_code=400)
 
     # تشغيل NER
     entities = get_entities(text)
-    selected_labels = [l.strip() for l in labels.split(",")]
+    selected_labels = [labbel.strip() for labbel in labels.split(",")]
 
     # تعمية النص
     anonymized = anonymize_text(text, entities, selected_labels, style, use_faker)
 
-    # إعادة بناء docx (حتى لو كان txt سنخرجه docx)
+    # إعادة بناء docx (حتى لو كان txt أو pdf سنخرجه docx)
     out_path = os.path.join(OUTPUT_DIR, file_id + ".docx")
     save_docx(anonymized.split("\n"), out_path)
 

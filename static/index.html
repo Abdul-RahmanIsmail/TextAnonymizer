@@ -121,6 +121,10 @@
         .custom-file-upload:hover {
             background: #e0f0ff;
         }
+
+        .warning-txt {
+            color: #007bff;
+        }
     </style>
 </head>
 
@@ -128,7 +132,8 @@
     <h1>Text Anonymizer</h1>
 
     <form id="anonForm">
-        <label for="file"><i class="fa fa-file"></i> Choose file (.txt or .docx):</label>
+        <label for="file"><i class="fa fa-file"></i> Choose file (<span class="warning-txt">.txt</span> or <span
+                class="warning-txt">.docx</span> or <span class="warning-txt">.pdf</span>):</label>
         <label class="custom-file-upload">
             <input type="file" id="file" name="file" required>
             Browse
@@ -140,11 +145,11 @@
         <div id="tags-container"></div>
 
         <div>
-            <button type="button" class="btn" data-label="PER">PER</button>
-            <button type="button" class="btn" data-label="ORG">ORG</button>
-            <button type="button" class="btn" data-label="LOC">LOC</button>
-            <button type="button" class="btn" data-label="EMAIL">EMAIL</button>
-            <button type="button" class="btn" data-label="PHONE">PHONE</button>
+            <button type="button" class="btn" data-label="PER">PER ➕</button>
+            <button type="button" class="btn" data-label="ORG">ORG ➕</button>
+            <button type="button" class="btn" data-label="LOC">LOC ➕</button>
+            <button type="button" class="btn" data-label="EMAIL">EMAIL ➕</button>
+            <button type="button" class="btn" data-label="PHONE">PHONE ➕</button>
         </div>
 
         <div>
@@ -172,9 +177,9 @@
             style="width:100%; background:#e0e0e0; height:8px; border-radius:5px; overflow:hidden;">
             <div id="progress-bar" style="width:0%; height:100%; background:#007bff; transition:width 0.3s;"></div>
         </div>
+        <div id="result"></div>
     </form>
 
-    <div id="result"></div>
 
     <script>
         const labelsInput = document.getElementById("labels");
@@ -193,7 +198,7 @@
 
                 const removeBtn = document.createElement("span");
                 removeBtn.className = "remove";
-                removeBtn.textContent = "×";
+                removeBtn.textContent = "❌";
                 removeBtn.onclick = () => {
                     tag.remove();
                     labelsInput.value = labelsInput.value.split(",").filter(l => l !== label).join(",");
