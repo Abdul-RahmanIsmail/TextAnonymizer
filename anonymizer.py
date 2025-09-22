@@ -1,49 +1,88 @@
-import re
-from faker import Faker
+import re # لاستخدام التعبيرات العادية (Regular Expressions).
+from faker import Faker # لإنشاء بيانات وهمية تبدو طبيعية.
 
 fake = Faker()
-
 
 def anonymize_text(
     original, entities, selected_labels, model_name, style="*****", use_faker=False
 ):
-    # تصفية الكيانات التي وجدها النموذج، مع تحديد فقط ما طله المستخدم
-    detected_entities = [e for e in entities if e["entity_group"] in selected_labels]
+    """
+    يقوم بتعمية النص بناءً على الكيانات المكتشفة والنموذج المستخدم.
+    
+    Args:
+        original (str): النص الأصلي.
+        entities (list): قائمة الكيانات المكتشفة من النموذج.
+        selected_labels (list): قائمة الفئات التي اختارها المستخدم للتعمية.
+        model_name (str): اسم النموذج المستخدم ("bert-base" أو "zero-shot").
+        style (str): النمط المستخدم للاستبدال إذا لم يتم استخدام Faker.
+        use_faker (bool): هل يتم استخدام مكتبة Faker للاستبدال.
+        
+    Returns:
+        str: النص المعمّى.
+    """
+    detected_entities = []
 
-    # التحقق مما إذا كان المستخدم يرغب في تعمية البريد الإلكتروني.
-    if "EMAIL" in selected_labels:
-        # ألبريد الألكتروني pattern تعريف .
-        pattern_email = r"[\w\.-]+@[\w\.-]+\.\w+"
+    if model_name == "bert-base":
+        # 1) معالجة كيانات NER من نموذج BERT base.
+        # تصفية الكيانات التي وجدها النموذج، مع تحديد فقط ما طلبه المستخدم.
+        detected_entities = [e for e in entities if e["entity_group"] in selected_labels]
 
-        # البحث عن كل بريد يحقق النمط.
-        for match in re.finditer(pattern_email, original):
-            # إضافة كل ما يطابق إلى قائمة الكيانات التي سيتم تعميتها.
-            detected_entities.append(
-                {
-                    "entity_group": "EMAIL",  # تعيين نوع الكيان.
-                    "start": match.start(),  # تحديد بداية الكيان.
-                    "end": match.end(),  # تحديد نهاية الكيان.
-                    "word": match.group(0),  # استخراج النص الفعلي للكيان.
-                }
-            )
+        # 2) اكتشاف البريد الإلكتروني ورقم الهاتف باستخدام Regex
+        if "EMAIL" in selected_labels:
+            # تعريف نمط البريد الإلكتروني.
+            pattern_email = r"[\w\.-]+@[\w\.-]+\.\w+"
+            # البحث عن كل بريد يحقق النمط.
+            for match in re.finditer(pattern_email, original):
+                # إضافة كل ما يطابق إلى قائمة الكيانات التي سيتم تعميتها.
+                detected_entities.append(
+                    {
+                        "entity_group": "EMAIL", # تعيين نوع الكيان.
+                        "start": match.start(), # تحديد بداية الكيان.
+                        "end": match.end(), # تحديد نهاية الكيان.
+                        "word": match.group(0), # استخراج النص الفعلي للكيان.
+                    }
+                )
 
-    # التحقق إذا كان المستخدم يرغب في تعمية أرقام الهاتف.
-    if "PHONE" in selected_labels:
-        # الخاص برفم الهاتف pattern تعريف .
-        pattern_phone = r"(\+?\d[\d\-\s]{7,}\d)"
-        # البحث عن كل أرقام الهواتف في النص.
-        for match in re.finditer(pattern_phone, original):
-            # إضافة كل رقم هاتف إلى قائمة الكيانات.
-            detected_entities.append(
-                {
-                    "entity_group": "PHONE",
-                    "start": match.start(),
-                    "end": match.end(),
-                    "word": match.group(0),
-                }
-            )
+        if "PHONE" in selected_labels:
+            # تعريف نمط رقم الهاتف.
+            pattern_phone = r"(\+?\d[\d\-\s]{7,}\d)"
+            # البحث عن كل أرقام الهواتف في النص.
+            for match in re.finditer(pattern_phone, original):
+                # إضافة كل رقم هاتف إلى قائمة الكيانات.
+                detected_entities.append(
+                    {
+                        "entity_group": "PHONE",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "word": match.group(0),
+                    }
+                )
+    
+    elif model_name == "zero-shot":
+        # 1) معالجة كيانات Zero-shot.
+        # بما أن هذا النموذج لا يعطي إحداثيات دقيقة، سنعتمد على Regex لتحديد المواقع.
+        
+        # تحويل أسماء الفئات إلى أنماط يمكن لـ Regex فهمها
+        label_mapping = {
+            "PER": r'\b[A-Z][a-z]+\s[A-Z][a-z]+\b', # مثال: يبحث عن اسمين يبدآن بحرف كبير
+            "ORG": r'\b(Inc|Corp|Ltd|LLC)\b',     # مثال: يبحث عن اختصارات الشركات
+            "LOC": r'\b(City|State|Province)\b', # مثال: يبحث عن أسماء أماكن شائعة
+            "EMAIL": r'[\w\.-]+@[\w\.-]+\.\w+',
+            "PHONE": r'(\+?\d[\d\-\s]{7,}\d)'
+        }
+        
+        for label in selected_labels:
+            pattern = label_mapping.get(label.upper())
+            if pattern:
+                for match in re.finditer(pattern, original):
+                    detected_entities.append({
+                        "entity_group": label.upper(),
+                        "start": match.start(),
+                        "end": match.end(),
+                        "word": match.group(0)
+                    })
 
-    # فرز الكيانات حسب موقعها في النص لكي لا تتداخل التعمية.
+    # 3) فرز الكيانات حسب موقعها في النص لكي لا تتداخل التعمية.
     detected_entities.sort(key=lambda e: e["start"])
 
     # --------------------- تعمية النص ---------------------#
@@ -56,9 +95,9 @@ def anonymize_text(
         # إضافة جزء النص الذي يسبق الكيان.
         out.append(original[last : e["start"]])
 
-        # Faker التحقق إذا كان سيتم استخدام.
+        # التحقق إذا كان سيتم استخدام Faker.
         if use_faker:
-            # Faker استبدال الكيان بنوع بيانات وهمية مناسب من
+            # استبدال الكيان بنوع بيانات وهمية مناسب من Faker.
             if e["entity_group"] == "PER":
                 out.append(fake.name())
             elif e["entity_group"] == "LOC":
@@ -70,13 +109,9 @@ def anonymize_text(
             elif e["entity_group"] == "PHONE":
                 out.append(fake.phone_number())
             else:
-                out.append(
-                    style
-                )  # [REDACTED] او [XXXX] في حالة عدم وجود نوع محدد، نستخدم النص الذي ادخله المستخدم مثل
+                out.append(style) 
         else:
-            out.append(
-                style
-            )  # Faker استبدال استخدام نمط التعمية المحدد من قبل المستخدم اذا لم يستخدم
+            out.append(style) 
         # تحديث آخر موضع تمت معالجته.
         last = e["end"]
     # إضافة الجزء الأخير من النص بعد آخر كيان.
