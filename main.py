@@ -22,7 +22,7 @@ from io_utils import (
     save_docx,
 )  # استيراد التوابع المساعدة للتعامل مع الملفات
 
-print("loading.......")
+print("loading model .......")
 
 from ner import get_entities  # استيراد التابع المسؤول عن اكتشاف الكيانات.
 from anonymizer import anonymize_text  # استيراد التابع المسؤول عن تعمية النص.
@@ -55,11 +55,6 @@ app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
 print("\n GO To http://127.0.0.1:8000 \n")
 
-
-@app.get("/")
-async def root():
-    # تعريف المسار الأساسي '/'، والذي يعيد الصفحة الرئيسية للتطبيق
-    return FileResponse("static/index.html")
 
 
 @app.post("/api/anonymize")
@@ -112,3 +107,14 @@ async def anonymize_file(
 
     # إرجاع الملف الذي تمت تعميته ليتمكن المستخدم من تنزيله
     return FileResponse(out_path, filename="anonymized.docx")
+
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("static/favicon.ico")
+
+@app.get("/")
+async def root():
+    # تعريف المسار الأساسي '/'، والذي يعيد الصفحة الرئيسية للتطبيق
+    return FileResponse("static/index.html")
