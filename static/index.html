@@ -9,10 +9,12 @@
         body {
             font-family: Arial;
             background: #f0f4f8;
-            padding: 30px;
+            padding: 0;
+            margin: 0;
         }
 
         h1 {
+            margin-top: 0;
             text-align: center;
             margin-bottom: 40px;
             color: #333;
@@ -46,6 +48,11 @@
         input[type="text"]:focus {
             outline: none;
             border-color: #007bff;
+        }
+
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
         }
 
         .btn {
@@ -91,7 +98,8 @@
             text-align: center;
         }
 
-        .input-style {
+        .input-style,
+        select {
             width: 100%;
             padding: 12px;
             font-size: 16px;
@@ -100,7 +108,8 @@
             transition: border-color 0.3s, box-shadow 0.3s;
         }
 
-        .input-style:focus {
+        .input-style:focus,
+        select:focus {
             border-color: #007bff;
             box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
             outline: none;
@@ -125,11 +134,29 @@
         .warning-txt {
             color: #007bff;
         }
+
+        .main-title {
+            background: linear-gradient(150deg, #063f7c, #05bdf0);
+            padding: 10px;
+            background-color: black;
+            color: gold;
+            text-shadow: black 5px 3px 7px;
+        }
+
+        .footer {
+            background: linear-gradient(150deg, #05bdf0, #063f7c);
+            padding: 10px;
+            color: white;
+            text-shadow: black 5px 3px 7px;
+            margin-top: 40px;
+            padding: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 
 <body>
-    <h1>Text Anonymizer</h1>
+    <h1 class="main-title">Text Anonymizer</h1>
 
     <form id="anonForm">
         <label for="file"><i class="fa fa-file"></i> Choose file (<span class="warning-txt">.txt</span> or <span
@@ -158,16 +185,27 @@
             <datalist id="style-options">
                 <option value="[REDACTED]">
                 <option value="*****">
-                <option value="XXX">
+                <option value="XXXX">
                 <option value="###">
                 <option value="CONFIDENTIAL">
             </datalist>
         </div>
 
+        <div>
+            <label for="model_name"><i class="fa fa-brain"></i> Choose Model:</label>
+            <br>
+            <span style="font-size: small;color: rgb(217, 130, 58);">
+              - Currently only (BERT base NER) is available
+            </span>            
+            <select id="model_name" name="model_name" class="input-style">
+                <option value="bert-base">BERT base NER</option>
+                <!-- <option value="zero-shot">Zero-shot NER</option> -->
+            </select>
+        </div>
 
         <label>
             <input type="checkbox" id="use_faker" name="use_faker">
-            Use Faker to replace entities
+            <span style="vertical-align: super;">Use Faker to replace entities</span>
         </label>
 
 
@@ -180,10 +218,16 @@
         <div id="result"></div>
     </form>
 
+    <div class="footer">Created by <span style="color: gold;">AbdulRahman Al-Ismail</span> &copy;2025</div>
 
     <script>
         const labelsInput = document.getElementById("labels");
         const tagsContainer = document.getElementById("tags-container");
+        const fileNameSpan = document.getElementById("file-name");
+
+        document.getElementById("file").addEventListener("change", (event) => {
+            fileNameSpan.textContent = event.target.files[0] ? event.target.files[0].name : "";
+        });
 
         function addLabel(label) {
             const current = labelsInput.value.split(",").filter(l => l);
@@ -191,7 +235,6 @@
                 current.push(label);
                 labelsInput.value = current.join(",");
 
-                // إنشاء تاج
                 const tag = document.createElement("span");
                 tag.className = "tag";
                 tag.textContent = label;
@@ -217,6 +260,7 @@
             const formData = new FormData();
             formData.append("file", document.getElementById("file").files[0]);
             formData.append("labels", labelsInput.value);
+            formData.append("model_name", document.getElementById("model_name").value);
             formData.append("style", document.getElementById("style").value);
             formData.append("use_faker", document.getElementById("use_faker").checked);
 

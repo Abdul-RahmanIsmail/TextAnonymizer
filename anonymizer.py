@@ -1,41 +1,64 @@
 import re
 from faker import Faker
+
 fake = Faker()
 
 
-def anonymize_text(original, entities, selected_labels, style="*****", use_faker=False):
-    # ===== 1) فلترة كيانات NER =====
+def anonymize_text(
+    original, entities, selected_labels, model_name, style="*****", use_faker=False
+):
+    # تصفية الكيانات التي وجدها النموذج، مع تحديد فقط ما طله المستخدم
     detected_entities = [e for e in entities if e["entity_group"] in selected_labels]
 
-    # ===== 2) اكتشاف البريد الإلكتروني ورقم الهاتف حسب اختيار المستخدم =====
+    # التحقق مما إذا كان المستخدم يرغب في تعمية البريد الإلكتروني.
     if "EMAIL" in selected_labels:
-        pattern_email = r'[\w\.-]+@[\w\.-]+\.\w+'
+        # ألبريد الألكتروني pattern تعريف .
+        pattern_email = r"[\w\.-]+@[\w\.-]+\.\w+"
+
+        # البحث عن كل بريد يحقق النمط.
         for match in re.finditer(pattern_email, original):
-            detected_entities.append({
-                "entity_group": "EMAIL",
-                "start": match.start(),
-                "end": match.end(),
-                "word": match.group(0)
-            })
+            # إضافة كل ما يطابق إلى قائمة الكيانات التي سيتم تعميتها.
+            detected_entities.append(
+                {
+                    "entity_group": "EMAIL",  # تعيين نوع الكيان.
+                    "start": match.start(),  # تحديد بداية الكيان.
+                    "end": match.end(),  # تحديد نهاية الكيان.
+                    "word": match.group(0),  # استخراج النص الفعلي للكيان.
+                }
+            )
 
+    # التحقق إذا كان المستخدم يرغب في تعمية أرقام الهاتف.
     if "PHONE" in selected_labels:
-        pattern_phone = r'(\+?\d[\d\-\s]{7,}\d)'
+        # الخاص برفم الهاتف pattern تعريف .
+        pattern_phone = r"(\+?\d[\d\-\s]{7,}\d)"
+        # البحث عن كل أرقام الهواتف في النص.
         for match in re.finditer(pattern_phone, original):
-            detected_entities.append({
-                "entity_group": "PHONE",
-                "start": match.start(),
-                "end": match.end(),
-                "word": match.group(0)
-            })
+            # إضافة كل رقم هاتف إلى قائمة الكيانات.
+            detected_entities.append(
+                {
+                    "entity_group": "PHONE",
+                    "start": match.start(),
+                    "end": match.end(),
+                    "word": match.group(0),
+                }
+            )
 
-    # ===== 3) ترتيب الكيانات =====
+    # فرز الكيانات حسب موقعها في النص لكي لا تتداخل التعمية.
     detected_entities.sort(key=lambda e: e["start"])
 
-    # ===== 4) بناء النص المعمّى =====
+    # --------------------- تعمية النص ---------------------#
+
+    # out: لتخزين الأجزاء
+    # last: لتتبع آخر موضع تمت معالجته.
     out, last = [], 0
+    # المرور على كل كيان تم تحديده.
     for e in detected_entities:
-        out.append(original[last:e["start"]])
+        # إضافة جزء النص الذي يسبق الكيان.
+        out.append(original[last : e["start"]])
+
+        # Faker التحقق إذا كان سيتم استخدام.
         if use_faker:
+            # Faker استبدال الكيان بنوع بيانات وهمية مناسب من
             if e["entity_group"] == "PER":
                 out.append(fake.name())
             elif e["entity_group"] == "LOC":
@@ -47,9 +70,16 @@ def anonymize_text(original, entities, selected_labels, style="*****", use_faker
             elif e["entity_group"] == "PHONE":
                 out.append(fake.phone_number())
             else:
-                out.append(style)
+                out.append(
+                    style
+                )  # [REDACTED] او [XXXX] في حالة عدم وجود نوع محدد، نستخدم النص الذي ادخله المستخدم مثل
         else:
-            out.append(style)
+            out.append(
+                style
+            )  # Faker استبدال استخدام نمط التعمية المحدد من قبل المستخدم اذا لم يستخدم
+        # تحديث آخر موضع تمت معالجته.
         last = e["end"]
+    # إضافة الجزء الأخير من النص بعد آخر كيان.
     out.append(original[last:])
+    # دمج الأجزاء في نص واحد.
     return "".join(out)
