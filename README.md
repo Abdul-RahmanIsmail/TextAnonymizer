@@ -8,8 +8,8 @@ A **web-based Text Anonymizer** built with **FastAPI** for anonymizing sensitive
 
 - **Upload Files**: `.txt` or `.docx`
 - **Entity Detection**:
-  - NER-based: `PER`, `ORG`, `LOC`
-  - Regex-based: `EMAIL`, `PHONE` (optional)
+  - NER-based / Zero-shot: `PER`, `ORG`, `LOC`
+  - Regex-based: `EMAIL`, `PHONE`
 - **Customizable Replacement**:
   - Fixed string (e.g., `[REDACTED]`) or realistic **Faker** data
 - **Interactive Frontend**:
@@ -47,6 +47,10 @@ A **web-based Text Anonymizer** built with **FastAPI** for anonymizing sensitive
 - │── `static/`
 - │   └── `index.html`          Frontend
 - │── `requirements.txt`        Python dependencies
+- │── `Examples`        Examples For Test
+- │   └── `Example_1.txt`          Text File
+- │   └── `Example_1.docx`         Word File
+- │   └── `Example_1.pdf`          PDF File
 - │── `README.md`
 
 
@@ -57,6 +61,7 @@ A **web-based Text Anonymizer** built with **FastAPI** for anonymizing sensitive
   **Clone repository**
   ```bash  
   git clone https://github.com/yourusername/text-anonymizer.git
+  
   cd text-anonymizer
   ```
 
@@ -67,7 +72,7 @@ A **web-based Text Anonymizer** built with **FastAPI** for anonymizing sensitive
 
  **Start FastAPI server**
   ```bash
-  - uvicorn main:app --reload
+    uvicorn main:app --reload
   ```
 
 ---
